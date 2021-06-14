@@ -55,7 +55,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/lbconf/puppetdb"
+	"gitlab.cern.ch/lb-experts/lbconf/connect"
 	"net/http"
 	"sort"
 	//"strings"
@@ -141,7 +141,7 @@ func main() {
 	//Lbheader := fmt.Sprintf("%s/load-balancing.conf-header", Configdir)
 	//Configfile := fmt.Sprintf("%s/load-balancing.conf", Configdir)
 
-	pdb := puppetdb.Puppetdb{
+	pdb := connect.Connect{
 		Ca:       Localcacert,
 		HostCert: Hostcert,
 		HostKey:  Hostprivkey,
@@ -176,7 +176,7 @@ func main() {
 	//	fmt.Printf("key[%s] value[%s]\n", k, v)
 	//}
 
-	lbp := puppetdb.Puppetdb{
+	lbp := connect.Connect{
 		Ca:       Localcacert,
 		HostCert: Hostcert,
 		HostKey:  Hostprivkey,
@@ -195,23 +195,17 @@ func main() {
 		//	fmt.Printf("Object : %+v\n", o)
 		//}
 		aliasdef := make(ObjectList, len(SearchResp.Objects))
-		i := 0
-		for _, v := range SearchResp.Objects {
-			// Filter by Lbpartition
-			if v.Tenant == Lbpartition {
-				aliasdef[i] = v
-				i++
-			}
+		for i, v := range SearchResp.Objects {
+			aliasdef[i] = v
 		}
 		sort.Sort(aliasdef)
 		ttl := 60
 		outputlst := make([]string, len(aliasdef))
 		for _, o := range aliasdef {
-			//fmt.Printf("Ordered Object : %+v\n", o)
-			//fmt.Printf("Ordered Alias : %+v\n", o.Alias_name)
-			// Remove empty entries
-			if o.Alias_name == "" {
-				//fmt.Printf("Object : %+v\n", o)
+			//fmt.Printf("Object : %+v\n", o)
+			//fmt.Printf("Alias : %+v\n", o.Alias_name)
+			// Filter by Lbpartition
+			if o.Tenant != Lbpartition {
 				continue
 			}
 			if o.Ttl != 0 {

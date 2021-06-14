@@ -1,4 +1,4 @@
-package puppetdb
+package connect
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-type Puppetdb struct {
+type Connect struct {
 	Ca       string
 	HostCert string
 	HostKey  string
@@ -18,7 +18,7 @@ type Puppetdb struct {
 	Client   *http.Client
 }
 
-func (self *Puppetdb) GetData() (error, []byte) {
+func (self *Connect) GetData() (error, []byte) {
 	caCert, err := ioutil.ReadFile(self.Ca)
 	if err != nil {
 		log.Fatal(err)
@@ -53,7 +53,7 @@ func (self *Puppetdb) GetData() (error, []byte) {
 	return err, []byte{byte(0)}
 }
 
-func (self *Puppetdb) doReq(payload []byte, soapAction, httpMethod string) bool {
+func (self *Connect) doReq(payload []byte, soapAction, httpMethod string) bool {
 	req, err := http.NewRequest(httpMethod, self.Url, bytes.NewReader(payload))
 	if err != nil {
 		log.Fatal("Error on creating request object. ", err.Error())
