@@ -57,6 +57,7 @@ import (
 	"fmt"
 	"gitlab.cern.ch/lb-experts/lbconf/connect"
 	"net/http"
+	"os"
 	"sort"
 	//"strings"
 )
@@ -150,10 +151,14 @@ func main() {
 
 	err, aliasresources := pdb.GetData()
 	if err != nil {
-		fmt.Sprintf("%s", err)
+		fmt.Printf("%s", err.Error())
 	} else {
 		//fmt.Println(string(aliasresources))
-		json.Unmarshal(aliasresources, &resources)
+		if err := json.Unmarshal(aliasresources, &resources); err != nil {
+			fmt.Printf("Error: %s\n", err.Error())
+			fmt.Printf("Here follows the aliasresources data : %s\n", string(aliasresources))
+			os.Exit(1)
+		}
 		//fmt.Printf("resources : %+v", resources)
 		//  # Generate hash of hosts members per lbalias
 		MembersPerAlias = make(map[string][]string)
@@ -185,10 +190,14 @@ func main() {
 
 	err, lbparams := lbp.GetData()
 	if err != nil {
-		fmt.Sprintf("%s", err)
+		fmt.Printf("%s", err.Error())
 	} else {
 		//fmt.Println(string(lbparams))
-		json.Unmarshal(lbparams, &SearchResp)
+		if err := json.Unmarshal(lbparams, &SearchResp); err != nil {
+			fmt.Printf("Error: %s\n", err.Error())
+			fmt.Printf("Here follows the lbparams data : %s\n", string(lbparams))
+			os.Exit(1)
+		}
 		//fmt.Printf("Meta : %+v", SearchResp.Meta)
 		//fmt.Printf("Object Array : %+v", SearchResp.Objects)
 		//for _, o := range SearchResp.Objects {

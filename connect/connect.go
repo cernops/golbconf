@@ -41,12 +41,12 @@ func (self *Connect) GetData() (error, []byte) {
 	}
 	response, err := self.Client.Get(self.Url)
 	if err != nil {
-		fmt.Sprintf("%s", err)
+		fmt.Printf("%s", err.Error())
 	} else {
 		defer response.Body.Close()
 		contents, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			fmt.Sprintf("%s", err)
+			fmt.Printf("%s", err.Error())
 		}
 		return err, contents
 	}
