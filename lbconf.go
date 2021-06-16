@@ -131,6 +131,18 @@ var SearchResp LbaliasBlob
 var MembersPerAlias map[string][]string
 var Clhostgroup map[string]string
 
+func removeDuplicateStr(strSlice []string) []string {
+	allKeys := make(map[string]bool)
+	list := []string{}
+	for _, item := range strSlice {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
+}
+
 func main() {
 	Hostname := "aiadm83.cern.ch"
 	Hostcert := fmt.Sprintf("/var/lib/puppet/ssl/certs/%s.pem", Hostname)
@@ -312,6 +324,44 @@ func main() {
 					}
 				} else {
 					fmt.Printf("category:no_hostgroup cluster:%s has no hostgroup defined\n", o.Alias_name)
+					for _, m := range MembersPerAlias[o.Alias_name] {
+						forbiddennodesinclude := false
+						for _, n := range o.ForbiddenNodes {
+							fmt.Printf("n: [%s] m[%s]\n", string(n), m)
+							if string(n) == m {
+								forbiddennodesinclude = true
+								break
+							}
+						}
+						if !forbiddennodesinclude {
+							mblist = append(mblist, m)
+						}
+						fmt.Printf("category:no_hostgroup cluster:%s member=%s hostgroup=%s\n", o.Alias_name, m, Clhostgroup[m])
+						fmt.Printf("category:no_hostgroup cluster:%s update ermis_api_alias set hostgroup = '%s'  where alias_name = '%s';\n", o.Alias_name, Clhostgroup[m], o.Alias_name)
+					}
+				}
+				// Include allowed nodes that are not in PuppetDB
+				anodes := strings.Split(o.AllowedNodes, ",")
+				mblist = append(mblist, anodes...)
+				uniqmblist := removeDuplicateStr(mblist)
+				sort.Strings(uniqmblist)
+				clusterline := fmt.Sprintf("clusters %s = %s", o.Alias_name, strings.Join(uniqmblist, " "))
+				outputlst = append(outputlst, clusterline)
+				fmt.Println(clusterline)
+
+			} else {
+				// Include allowed nodes for an alias with no members
+				if o.AllowedNodes != "" {
+					anodes := strings.Split(o.AllowedNodes, ",")
+					mblist = append(mblist, anodes...)
+					uniqmblist := removeDuplicateStr(mblist)
+					sort.Strings(uniqmblist)
+					clusterline := fmt.Sprintf("clusters %s = %s", o.Alias_name, strings.Join(uniqmblist, " "))
+					outputlst = append(outputlst, clusterline)
+					fmt.Println(clusterline)
+
+				} else {
+					fmt.Printf("category:no_members cluster:%s has no members\n", o.Alias_name)
 				}
 			}
 		}
