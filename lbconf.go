@@ -131,6 +131,18 @@ var SearchResp LbaliasBlob
 var MembersPerAlias map[string][]string
 var Clhostgroup map[string]string
 
+func isIncludedIn(list []string, key string) bool {
+	for _, a := range list {
+		if len(a) == 0 {
+			continue
+		}
+		if a == key {
+			return true
+		}
+	}
+	return false
+}
+
 func removeDuplicates(listwithdups []string) []string {
 	allKeys := make(map[string]bool)
 	outputlist := []string{}
@@ -254,39 +266,13 @@ func main() {
 		// make list of valid aliases
 		aliaslst := make([]string, len(aliasdef))
 		for _, o := range aliasdef {
-			//if o.Alias_name != nil {
 			if len(o.Alias_name) != 0 {
 				aliaslst = append(aliaslst, o.Alias_name)
 			}
-			//}
 		}
-		//fmt.Printf("aliaslst : %+v\n", aliaslst)
 		for k, v := range MembersPerAlias {
-			//fmt.Printf("key[%s] value[%s]\n", k, v)
-			aliaslstinclude := false
-			for _, a := range aliaslst {
-				if len(a) == 0 {
-					continue
-				}
-				if a == k {
-					aliaslstinclude = true
-					break
-				}
-			}
-			cnamesinclude := false
-			for _, c := range cnames {
-				if len(c) == 0 {
-					continue
-				}
-				//fmt.Printf("c: [%s] k[%s]\n", c, k)
-				sk := strings.Split(k, ".")
-				if c == sk[0] {
-					cnamesinclude = true
-					break
-				}
-			}
-			if !aliaslstinclude {
-				if cnamesinclude {
+			if !isIncludedIn(aliaslst, k) {
+				if isIncludedIn(cnames, strings.Split(k, ".")[0]) {
 					reportlst = append(reportlst, fmt.Sprintf("category:alias_cname cluster:%s the alias is a canonical name record", k))
 				} else {
 					sort.Strings(v)
@@ -298,6 +284,10 @@ func main() {
 			if o.Tenant != Lbpartition {
 				continue
 			}
+			fnodes := []string{}
+			if o.ForbiddenNodes != "" {
+				fnodes = strings.Split(o.ForbiddenNodes, ",")
+			}
 			mblist := make([]string, 50, 1000)
 			if _, ok := MembersPerAlias[o.Alias_name]; ok {
 				if o.Hostgroup != "" {
@@ -305,17 +295,8 @@ func main() {
 					for _, m := range MembersPerAlias[o.Alias_name] {
 						oh := strings.Split(o.Hostgroup, "/")
 						ch := strings.Split(Clhostgroup[m], "/")
-						//fmt.Printf("ch[0]: [%s] oh[0][%s]\n", ch[0], oh[0])
 						if oh[0] == ch[0] {
-							forbiddennodesinclude := false
-							for _, n := range o.ForbiddenNodes {
-								//fmt.Printf("n: [%s] m[%s]\n", string(n), m)
-								if string(n) == m {
-									forbiddennodesinclude = true
-									break
-								}
-							}
-							if !forbiddennodesinclude {
+							if !isIncludedIn(fnodes, m) {
 								mblist = append(mblist, m)
 							}
 						} else {
@@ -325,15 +306,7 @@ func main() {
 				} else {
 					reportlst = append(reportlst, fmt.Sprintf("category:no_hostgroup cluster:%s has no hostgroup defined", o.Alias_name))
 					for _, m := range MembersPerAlias[o.Alias_name] {
-						forbiddennodesinclude := false
-						for _, n := range o.ForbiddenNodes {
-							fmt.Printf("n: [%s] m[%s]\n", string(n), m)
-							if string(n) == m {
-								forbiddennodesinclude = true
-								break
-							}
-						}
-						if !forbiddennodesinclude {
+						if !isIncludedIn(fnodes, m) {
 							mblist = append(mblist, m)
 						}
 						reportlst = append(reportlst, fmt.Sprintf("category:no_hostgroup cluster:%s member=%s hostgroup=%s", o.Alias_name, m, Clhostgroup[m]))
