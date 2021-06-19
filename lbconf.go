@@ -131,20 +131,20 @@ var SearchResp LbaliasBlob
 var MembersPerAlias map[string][]string
 var Clhostgroup map[string]string
 
-func removeDuplicateStr(strSlice []string) []string {
+func removeDuplicates(listwithdups []string) []string {
 	allKeys := make(map[string]bool)
-	list := []string{}
-	for _, item := range strSlice {
+	outputlist := []string{}
+	for _, item := range listwithdups {
 		if _, value := allKeys[item]; !value {
 			allKeys[item] = true
-			list = append(list, item)
+			outputlist = append(outputlist, item)
 		}
 	}
-	return list
+	return outputlist
 }
 
 func main() {
-	Hostname := "aiadm83.cern.ch"
+	Hostname := "aiadm99.cern.ch"
 	Hostcert := fmt.Sprintf("/var/lib/puppet/ssl/certs/%s.pem", Hostname)
 	//Hostprivkey := fmt.Sprintf("/var/lib/puppet/ssl/private_keys/%s.pem", Hostname)
 	Hostprivkey := fmt.Sprintf("/afs/cern.ch/user/r/reguero/work/git/golbconf/%s.pem", Hostname)
@@ -220,8 +220,8 @@ func main() {
 			aliasdef[i] = v
 		}
 		sort.Sort(aliasdef)
-		ttl := 60
 		outputlst := make([]string, len(aliasdef)*2)
+		reportlst := make([]string, len(aliasdef)*2)
 		for _, o := range aliasdef {
 			//fmt.Printf("Object : %+v\n", o)
 			//fmt.Printf("Alias : %+v\n", o.Alias_name)
@@ -229,6 +229,7 @@ func main() {
 			if o.Tenant != Lbpartition {
 				continue
 			}
+			ttl := 60
 			if o.Ttl != 0 {
 				//fmt.Printf("Ttl : %+v ", o.Ttl)
 				ttl = o.Ttl
@@ -286,21 +287,20 @@ func main() {
 			}
 			if !aliaslstinclude {
 				if cnamesinclude {
-					fmt.Printf("category:alias_cname cluster:%s the alias is a canonical name record\n", k)
+					reportlst = append(reportlst, fmt.Sprintf("category:alias_cname cluster:%s the alias is a canonical name record", k))
 				} else {
 					sort.Strings(v)
-					fmt.Printf("category:alias_not_in_config cluster:%s alias not in configuration. Pointed by the following host(s) %s\n", k, strings.Join(v, " "))
+					reportlst = append(reportlst, fmt.Sprintf("category:alias_not_in_config cluster:%s alias not in configuration. Pointed by the following host(s) %s", k, strings.Join(v, " ")))
 				}
 			}
 		}
-		mblist := make([]string, 50, 1000)
 		for _, o := range aliasdef {
 			if o.Tenant != Lbpartition {
 				continue
 			}
+			mblist := make([]string, 50, 1000)
 			if _, ok := MembersPerAlias[o.Alias_name]; ok {
 				if o.Hostgroup != "" {
-					mblist = mblist[:0] // Reset mblist
 					sort.Strings(MembersPerAlias[o.Alias_name])
 					for _, m := range MembersPerAlias[o.Alias_name] {
 						oh := strings.Split(o.Hostgroup, "/")
@@ -309,7 +309,7 @@ func main() {
 						if oh[0] == ch[0] {
 							forbiddennodesinclude := false
 							for _, n := range o.ForbiddenNodes {
-								fmt.Printf("n: [%s] m[%s]\n", string(n), m)
+								//fmt.Printf("n: [%s] m[%s]\n", string(n), m)
 								if string(n) == m {
 									forbiddennodesinclude = true
 									break
@@ -319,11 +319,11 @@ func main() {
 								mblist = append(mblist, m)
 							}
 						} else {
-							fmt.Printf("category:wrong_hostgroup cluster:%s hostgroup=%s member=%s with wrong hostgroup=%s\n", o.Alias_name, o.Hostgroup, m, Clhostgroup[m])
+							reportlst = append(reportlst, fmt.Sprintf("category:wrong_hostgroup cluster:%s hostgroup=%s member=%s with wrong hostgroup=%s", o.Alias_name, o.Hostgroup, m, Clhostgroup[m]))
 						}
 					}
 				} else {
-					fmt.Printf("category:no_hostgroup cluster:%s has no hostgroup defined\n", o.Alias_name)
+					reportlst = append(reportlst, fmt.Sprintf("category:no_hostgroup cluster:%s has no hostgroup defined", o.Alias_name))
 					for _, m := range MembersPerAlias[o.Alias_name] {
 						forbiddennodesinclude := false
 						for _, n := range o.ForbiddenNodes {
@@ -336,32 +336,29 @@ func main() {
 						if !forbiddennodesinclude {
 							mblist = append(mblist, m)
 						}
-						fmt.Printf("category:no_hostgroup cluster:%s member=%s hostgroup=%s\n", o.Alias_name, m, Clhostgroup[m])
-						fmt.Printf("category:no_hostgroup cluster:%s update ermis_api_alias set hostgroup = '%s'  where alias_name = '%s';\n", o.Alias_name, Clhostgroup[m], o.Alias_name)
+						reportlst = append(reportlst, fmt.Sprintf("category:no_hostgroup cluster:%s member=%s hostgroup=%s", o.Alias_name, m, Clhostgroup[m]))
+						reportlst = append(reportlst, fmt.Sprintf("category:no_hostgroup cluster:%s update ermis_api_alias set hostgroup = '%s'  where alias_name = '%s';", o.Alias_name, Clhostgroup[m], o.Alias_name))
 					}
 				}
 				// Include allowed nodes that are not in PuppetDB
 				anodes := strings.Split(o.AllowedNodes, ",")
 				mblist = append(mblist, anodes...)
-				uniqmblist := removeDuplicateStr(mblist)
+				uniqmblist := removeDuplicates(mblist)
 				sort.Strings(uniqmblist)
-				clusterline := fmt.Sprintf("clusters %s = %s", o.Alias_name, strings.Join(uniqmblist, " "))
-				outputlst = append(outputlst, clusterline)
-				fmt.Println(clusterline)
-
+				outputlst = append(outputlst, fmt.Sprintf("clusters %s =%s", o.Alias_name, strings.Join(uniqmblist, " ")))
+				fmt.Println(outputlst[len(outputlst)-1])
 			} else {
 				// Include allowed nodes for an alias with no members
 				if o.AllowedNodes != "" {
 					anodes := strings.Split(o.AllowedNodes, ",")
 					mblist = append(mblist, anodes...)
-					uniqmblist := removeDuplicateStr(mblist)
+					uniqmblist := removeDuplicates(mblist)
 					sort.Strings(uniqmblist)
-					clusterline := fmt.Sprintf("clusters %s = %s", o.Alias_name, strings.Join(uniqmblist, " "))
-					outputlst = append(outputlst, clusterline)
-					fmt.Println(clusterline)
+					outputlst = append(outputlst, fmt.Sprintf("clusters %s =%s", o.Alias_name, strings.Join(uniqmblist, " ")))
+					fmt.Println(outputlst[len(outputlst)-1])
 
 				} else {
-					fmt.Printf("category:no_members cluster:%s has no members\n", o.Alias_name)
+					reportlst = append(reportlst, fmt.Sprintf("category:no_members cluster:%s has no members", o.Alias_name))
 				}
 			}
 		}
