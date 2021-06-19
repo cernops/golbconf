@@ -54,6 +54,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"gitlab.cern.ch/lb-experts/lbconf/connect"
 	"net/http"
@@ -126,6 +127,10 @@ type Resource struct {
 	Certname   string          `json:"certname"`
 }
 
+var configDirFlag = flag.String("configdir", "/usr/local/etc", "specify configuration directory path")
+var PartitionFlag = flag.String("partition", "golang", "specify lbd partition")
+var debugFlag = flag.Bool("debug", false, "set lbconf in debug mode")
+var stdoutFlag = flag.Bool("stdout", false, "send log to stdtout")
 var resources []Resource
 var SearchResp LbaliasBlob
 var MembersPerAlias map[string][]string
@@ -156,12 +161,17 @@ func removeDuplicates(listwithdups []string) []string {
 }
 
 func main() {
-	Hostname := "aiadm99.cern.ch"
+	flag.Parse()
+	Hostname, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("Hostname Error: %s\n", err.Error())
+		os.Exit(1)
+	}
 	Hostcert := fmt.Sprintf("/var/lib/puppet/ssl/certs/%s.pem", Hostname)
 	//Hostprivkey := fmt.Sprintf("/var/lib/puppet/ssl/private_keys/%s.pem", Hostname)
 	Hostprivkey := fmt.Sprintf("/afs/cern.ch/user/r/reguero/work/git/golbconf/%s.pem", Hostname)
-	Lbpartition := "golang"
-	//Configdir := "/usr/local/etc"
+	Lbpartition := *PartitionFlag
+	//Configdir := *configDirFlag
 	//Reportfile := fmt.Sprintf("%s/load-balancing.report", Configdir)
 	//Lbheader := fmt.Sprintf("%s/load-balancing.conf-header", Configdir)
 	//Configfile := fmt.Sprintf("%s/load-balancing.conf", Configdir)
@@ -177,13 +187,11 @@ func main() {
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 	} else {
-		//fmt.Println(string(aliasresources))
 		if err := json.Unmarshal(aliasresources, &resources); err != nil {
 			fmt.Printf("Error: %s\n", err.Error())
 			fmt.Printf("Here follows the aliasresources data : %s\n", string(aliasresources))
 			os.Exit(1)
 		}
-		//fmt.Printf("resources : %+v", resources)
 		//  # Generate hash of hosts members per lbalias
 		MembersPerAlias = make(map[string][]string)
 		for _, r := range resources {
@@ -197,13 +205,6 @@ func main() {
 		}
 
 	}
-	//fmt.Printf("MembersPerAlias : %+v", MembersPerAlias)
-	//for k, v := range MembersPerAlias {
-	//	fmt.Printf("key[%s] value[%s]\n", k, v)
-	//}
-	//for k, v := range Clhostgroup {
-	//	fmt.Printf("key[%s] value[%s]\n", k, v)
-	//}
 
 	lbp := connect.Connect{
 		Ca:       Localcacert,
@@ -216,17 +217,11 @@ func main() {
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 	} else {
-		//fmt.Println(string(lbparams))
 		if err := json.Unmarshal(lbparams, &SearchResp); err != nil {
 			fmt.Printf("Error: %s\n", err.Error())
 			fmt.Printf("Here follows the lbparams data : %s\n", string(lbparams))
 			os.Exit(1)
 		}
-		//fmt.Printf("Meta : %+v", SearchResp.Meta)
-		//fmt.Printf("Object Array : %+v", SearchResp.Objects)
-		//for _, o := range SearchResp.Objects {
-		//	fmt.Printf("Object : %+v\n", o)
-		//}
 		aliasdef := make(ObjectList, len(SearchResp.Objects))
 		for i, v := range SearchResp.Objects {
 			aliasdef[i] = v
@@ -235,34 +230,25 @@ func main() {
 		outputlst := make([]string, len(aliasdef)*2)
 		reportlst := make([]string, len(aliasdef)*2)
 		for _, o := range aliasdef {
-			//fmt.Printf("Object : %+v\n", o)
-			//fmt.Printf("Alias : %+v\n", o.Alias_name)
 			// Filter by Lbpartition
 			if o.Tenant != Lbpartition {
 				continue
 			}
 			ttl := 60
 			if o.Ttl != 0 {
-				//fmt.Printf("Ttl : %+v ", o.Ttl)
 				ttl = o.Ttl
 			}
 			line := fmt.Sprintf("parameters %s = behaviour#%s best_hosts#%d external#%s metric#%s polling_interval#%d statistics#%s ttl#%d", o.Alias_name, o.Behaviour, o.Best_hosts, o.External, o.Metric, o.Polling_interval, o.Statistics, ttl)
 			outputlst = append(outputlst, line)
 			fmt.Println(line)
 		}
-		//output := strings.Join(outputlst[:], "\n")
-		//fmt.Printf(output)
-		//fmt.Printf("outputlst : %+v\n", outputlst[:])
 		// Let's populate all the possible cnames"
 		cnames := make([]string, len(aliasdef), len(aliasdef)*8)
 		for _, o := range aliasdef {
-			//if o.Cnames != nil {
 			if len(o.Cnames) != 0 {
 				cnames = append(cnames, o.Cnames...)
 			}
-			//}
 		}
-		//fmt.Printf("cnames : %+v\n", cnames)
 		// make list of valid aliases
 		aliaslst := make([]string, len(aliasdef))
 		for _, o := range aliasdef {
