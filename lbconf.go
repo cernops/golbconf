@@ -29,8 +29,8 @@ func main() {
 		os.Exit(1)
 	}
 	Hostcert := fmt.Sprintf("/var/lib/puppet/ssl/certs/%s.pem", Hostname)
-	//Hostprivkey := fmt.Sprintf("/var/lib/puppet/ssl/private_keys/%s.pem", Hostname)
-	Hostprivkey := fmt.Sprintf("/afs/cern.ch/user/r/reguero/work/git/golbconf/%s.pem", Hostname)
+	Hostprivkey := fmt.Sprintf("/var/lib/puppet/ssl/private_keys/%s.pem", Hostname)
+	//Hostprivkey := fmt.Sprintf("/afs/cern.ch/user/r/reguero/work/git/golbconf/%s.pem", Hostname)
 	Configdir := *configDirFlag
 	Reportfile := fmt.Sprintf("%s/load-balancing-go.report", Configdir)
 	Lbheader := fmt.Sprintf("%s/load-balancing.conf-header", Configdir)
