@@ -31,7 +31,6 @@ type LbaliasObject struct {
 	User              string   `json:"user"`
 }
 
-//ObjectList struct for the list
 type ObjectList []LbaliasObject
 
 func (p ObjectList) Len() int           { return len(p) }
@@ -80,6 +79,7 @@ type LBConfig struct {
 	Rlog            *Log
 }
 
+// Checks whether a string is included in a list
 func isIncludedIn(list []string, key string) bool {
 	for _, a := range list {
 		if len(a) == 0 {
@@ -92,6 +92,7 @@ func isIncludedIn(list []string, key string) bool {
 	return false
 }
 
+// Removes duplicates from a list of strings
 func removeDuplicates(listwithdups []string) []string {
 	allKeys := make(map[string]bool)
 	outputlist := []string{}
@@ -104,6 +105,7 @@ func removeDuplicates(listwithdups []string) []string {
 	return outputlist
 }
 
+// Get alias resources from PuppetDB
 func (lbc *LBConfig) Get_alias_resources_from_pdb(pdb connect.Connect) error {
 	err, aliasresources := pdb.GetData()
 	if err != nil {
@@ -134,6 +136,7 @@ func (lbc *LBConfig) Get_alias_resources_from_pdb(pdb connect.Connect) error {
 	return nil
 }
 
+// Get alias objects from Ermis REST service
 func (lbc *LBConfig) Get_alias_objects_from_ermis(lbp connect.Connect) error {
 	err, lbparams := lbp.GetData()
 	if err != nil {
@@ -158,6 +161,7 @@ func (lbc *LBConfig) Get_alias_objects_from_ermis(lbp connect.Connect) error {
 	return nil
 }
 
+// Generate part of the config file with the list of aliases with their params
 func (lbc *LBConfig) Gen_params() {
 	lbc.outputlst = make([]string, len(lbc.Aliasdef)*2)
 	for _, o := range lbc.Aliasdef {
@@ -175,6 +179,7 @@ func (lbc *LBConfig) Gen_params() {
 
 }
 
+// Assingns members to LB aliases
 func (lbc *LBConfig) Gen_clusters() {
 	// Let's populate all the possible cnames"
 	cnames := make([]string, len(lbc.Aliasdef), len(lbc.Aliasdef)*8)
@@ -281,6 +286,7 @@ func removeEmpty(list []string) []string {
 	return res
 }
 
+// Creates load-balancing.conf
 func (lbc *LBConfig) Create_config_file(Lbheader string, Configfile string) error {
 	prevfile := Configfile[0:len(Configfile)-5] + "prev"
 	newfile := Configfile[0:len(Configfile)-5] + "new"
