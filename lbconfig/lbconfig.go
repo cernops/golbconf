@@ -1,9 +1,11 @@
 package lbconfig
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"gitlab.cern.ch/lb-experts/lbconf/connect"
+	"os"
 	"sort"
 	"strings"
 )
@@ -73,9 +75,9 @@ type LBConfig struct {
 	Clhostgroup     map[string]string
 	Aliasdef        ObjectList
 	outputlst       []string
-	reportlst       []string
 	Lbpartition     string
 	Debug           bool
+	Rlog            *Log
 }
 
 func isIncludedIn(list []string, key string) bool {
@@ -158,7 +160,6 @@ func (lbc *LBConfig) Get_alias_objects_from_ermis(lbp connect.Connect) error {
 
 func (lbc *LBConfig) Gen_params() {
 	lbc.outputlst = make([]string, len(lbc.Aliasdef)*2)
-	lbc.reportlst = make([]string, len(lbc.Aliasdef)*2)
 	for _, o := range lbc.Aliasdef {
 		// Filter by Lbpartition
 		if o.Tenant != lbc.Lbpartition {
@@ -170,9 +171,6 @@ func (lbc *LBConfig) Gen_params() {
 		}
 		line := fmt.Sprintf("parameters %s = behaviour#%s best_hosts#%d external#%s metric#%s polling_interval#%d statistics#%s ttl#%d", o.Alias_name, o.Behaviour, o.Best_hosts, o.External, o.Metric, o.Polling_interval, o.Statistics, ttl)
 		lbc.outputlst = append(lbc.outputlst, line)
-		if lbc.Debug {
-			fmt.Println(line)
-		}
 	}
 
 }
@@ -195,10 +193,10 @@ func (lbc *LBConfig) Gen_clusters() {
 	for k, v := range lbc.MembersPerAlias {
 		if !isIncludedIn(aliaslst, k) {
 			if isIncludedIn(cnames, strings.Split(k, ".")[0]) {
-				lbc.reportlst = append(lbc.reportlst, fmt.Sprintf("category:alias_cname cluster:%s the alias is a canonical name record", k))
+				lbc.Write_to_report("WARN", fmt.Sprintf("category:alias_cname cluster:%s the alias is a canonical name record", k))
 			} else {
 				sort.Strings(v)
-				lbc.reportlst = append(lbc.reportlst, fmt.Sprintf("category:alias_not_in_config cluster:%s alias not in configuration. Pointed by the following host(s) %s", k, strings.Join(v, " ")))
+				lbc.Write_to_report("ERROR", fmt.Sprintf("category:alias_not_in_config cluster:%s alias not in configuration. Pointed by the following host(s) %s", k, strings.Join(v, " ")))
 			}
 		}
 	}
@@ -222,17 +220,17 @@ func (lbc *LBConfig) Gen_clusters() {
 							mblist = append(mblist, m)
 						}
 					} else {
-						lbc.reportlst = append(lbc.reportlst, fmt.Sprintf("category:wrong_hostgroup cluster:%s hostgroup=%s member=%s with wrong hostgroup=%s", o.Alias_name, o.Hostgroup, m, lbc.Clhostgroup[m]))
+						lbc.Write_to_report("ERROR", fmt.Sprintf("category:wrong_hostgroup cluster:%s hostgroup=%s member=%s with wrong hostgroup=%s", o.Alias_name, o.Hostgroup, m, lbc.Clhostgroup[m]))
 					}
 				}
 			} else {
-				lbc.reportlst = append(lbc.reportlst, fmt.Sprintf("category:no_hostgroup cluster:%s has no hostgroup defined", o.Alias_name))
+				lbc.Write_to_report("ERROR", fmt.Sprintf("category:no_hostgroup cluster:%s has no hostgroup defined", o.Alias_name))
 				for _, m := range lbc.MembersPerAlias[o.Alias_name] {
 					if !isIncludedIn(fnodes, m) {
 						mblist = append(mblist, m)
 					}
-					lbc.reportlst = append(lbc.reportlst, fmt.Sprintf("category:no_hostgroup cluster:%s member=%s hostgroup=%s", o.Alias_name, m, lbc.Clhostgroup[m]))
-					lbc.reportlst = append(lbc.reportlst, fmt.Sprintf("category:no_hostgroup cluster:%s update ermis_api_alias set hostgroup = '%s'  where alias_name = '%s';", o.Alias_name, lbc.Clhostgroup[m], o.Alias_name))
+					lbc.Write_to_report("ERROR", fmt.Sprintf("category:no_hostgroup cluster:%s member=%s hostgroup=%s", o.Alias_name, m, lbc.Clhostgroup[m]))
+					lbc.Write_to_report("ERROR", fmt.Sprintf("category:no_hostgroup cluster:%s update ermis_api_alias set hostgroup = '%s'  where alias_name = '%s';", o.Alias_name, lbc.Clhostgroup[m], o.Alias_name))
 				}
 			}
 			// Include allowed nodes that are not in PuppetDB
@@ -241,9 +239,6 @@ func (lbc *LBConfig) Gen_clusters() {
 			uniqmblist := removeDuplicates(mblist)
 			sort.Strings(uniqmblist)
 			lbc.outputlst = append(lbc.outputlst, fmt.Sprintf("clusters %s =%s", o.Alias_name, strings.Join(uniqmblist, " ")))
-			if lbc.Debug {
-				fmt.Println(lbc.outputlst[len(lbc.outputlst)-1])
-			}
 		} else {
 			// Include allowed nodes for an alias with no members
 			if o.AllowedNodes != "" {
@@ -252,13 +247,89 @@ func (lbc *LBConfig) Gen_clusters() {
 				uniqmblist := removeDuplicates(mblist)
 				sort.Strings(uniqmblist)
 				lbc.outputlst = append(lbc.outputlst, fmt.Sprintf("clusters %s =%s", o.Alias_name, strings.Join(uniqmblist, " ")))
-				if lbc.Debug {
-					fmt.Println(lbc.outputlst[len(lbc.outputlst)-1])
-				}
 
 			} else {
-				lbc.reportlst = append(lbc.reportlst, fmt.Sprintf("category:no_members cluster:%s has no members", o.Alias_name))
+				lbc.Write_to_report("ERROR", fmt.Sprintf("category:no_members cluster:%s has no members", o.Alias_name))
 			}
 		}
 	}
+}
+
+// readLines reads a whole file into memory and returns a slice of lines.
+func readLines(path string) (lines []string, err error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		lines = append(lines, sc.Text())
+	}
+	return lines, sc.Err()
+}
+
+//remove empty lines from array
+func removeEmpty(list []string) []string {
+	res := []string{}
+	for _, s := range list {
+		if s != "" {
+			res = append(res, s)
+		}
+	}
+	return res
+}
+
+func (lbc *LBConfig) Create_config_file(Lbheader string, Configfile string) error {
+	prevfile := Configfile[0:len(Configfile)-5] + "prev"
+	newfile := Configfile[0:len(Configfile)-5] + "new"
+	headerlines, err := readLines(Lbheader)
+	if err != nil {
+		if lbc.Debug {
+			fmt.Printf("readLines Error: %s\n", err.Error())
+		}
+		return err
+	}
+	f, err := os.OpenFile(newfile, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		if lbc.Debug {
+			fmt.Printf("can not open %v for writing: %v", newfile, err)
+		}
+		return err
+	}
+	headerlines = append(headerlines, "")
+	for _, l := range append(headerlines, removeEmpty(lbc.outputlst)...) {
+		_, err = fmt.Fprintf(f, "%s\n", l)
+		if err != nil {
+			if lbc.Debug {
+				fmt.Printf("can not write to %v: %v", newfile, err)
+			}
+		}
+	}
+	f.Close()
+
+	if _, err := os.Stat(Configfile); err == nil {
+		// File exists
+		if err = os.Rename(Configfile, prevfile); err != nil {
+			if lbc.Debug {
+				fmt.Printf("can not rename %v to %v: %v", Configfile, prevfile, err)
+			}
+			return err
+		}
+
+	} else if !os.IsNotExist(err) {
+		if lbc.Debug {
+			fmt.Printf("Stat Error: %s\n", err.Error())
+		}
+		return err
+	}
+	if err = os.Rename(newfile, Configfile); err != nil {
+		if lbc.Debug {
+			fmt.Printf("can not rename %v to %v: %v", newfile, Configfile, err)
+		}
+		return err
+	}
+	return nil
+
 }
