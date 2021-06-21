@@ -42,7 +42,8 @@ test-my-project:
     - pwd
     - ls
     - ls ./tests
-    - sockstat
+    - ls -l /var/run/log
+    - ls -l /var/run/syslog
     - go test -v -cover ./tests/...
     - go test -race ./tests
 
