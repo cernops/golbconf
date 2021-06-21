@@ -38,6 +38,10 @@ test-my-project:
   stage: prebuild
   script:
     - *install_go
+    - go version
+    - pwd
+    - ls
+    - ls ./tests
     - go test -v -cover ./tests/...
     - go test -race ./tests
 
