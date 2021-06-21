@@ -42,6 +42,7 @@ test-my-project:
     - pwd
     - ls
     - ls ./tests
+    - sockstat
     - go test -v -cover ./tests/...
     - go test -race ./tests
 
