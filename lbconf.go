@@ -36,11 +36,6 @@ func main() {
 	Lbheader := fmt.Sprintf("%s/load-balancing.conf-header", Configdir)
 	Configfile := fmt.Sprintf("%s/load-balancing-go.conf", Configdir)
 
-	//log, err := syslog.New(syslog.LOG_NOTICE, "lbconf")
-	//if err != nil {
-	//	fmt.Printf("Error opening log for report: %s\n", err.Error())
-	//	os.Exit(1)
-	//}
 	lg := lbconfig.Log{Writer: syslog.Writer{}, Syslog: false, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: Reportfile}
 
 	lbconfig := lbconfig.LBConfig{}
