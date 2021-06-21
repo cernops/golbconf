@@ -37,11 +37,11 @@ func main() {
 	Configfile := fmt.Sprintf("%s/load-balancing-go.conf", Configdir)
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbconf")
-	lg := lbconfig.Log{Writer: *log, Syslog: false, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: Reportfile}
 	if e != nil {
 		fmt.Printf("Error opening log for report: %s\n", err.Error())
 		os.Exit(1)
 	}
+	lg := lbconfig.Log{Writer: *log, Syslog: false, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: Reportfile}
 
 	lbconfig := lbconfig.LBConfig{}
 	lbconfig.Lbpartition = *PartitionFlag

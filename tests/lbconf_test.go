@@ -31,10 +31,10 @@ func TestLbconf(t *testing.T) {
 	Configfile := fmt.Sprintf("%s/load-balancing-go.conf", Configdir)
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbconf")
-	lg := lbconfig.Log{Writer: *log, Syslog: false, Stdout: false, Debugflag: true, TofilePath: Reportfile}
 	if e != nil {
 		t.Errorf("Error opening log for report: %s\n", err.Error())
 	}
+	lg := lbconfig.Log{Writer: *log, Syslog: false, Stdout: false, Debugflag: true, TofilePath: Reportfile}
 
 	lbconfig := lbconfig.LBConfig{}
 	lbconfig.Lbpartition = "golang"
