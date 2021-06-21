@@ -1,0 +1,33 @@
+#
+# Who is the primary master to upload the data ?
+#  - fully qualified DNS name
+#
+
+master = lbd75.cern.ch
+
+#
+# Heartbeat details
+#
+heartbeat_path = /var/www/html/load-balancing
+heartbeat_file = heartbeat
+
+#
+# TSIG HMAC-MD5 algorithm keys for DNS access
+#
+tsig_key_prefix = itpes-
+tsig_internal_key = 8RTiYiYkPTybW8sGG7MI0g==
+tsig_external_key = dmugp9uEkTn44F/FqBgRvw==
+
+#
+# SNMPv3 password for 'loadbalancing' user
+#
+snmpd_password = OidLvSu8amNMRz258Udy74tO60p47n0RA4RzaT3j2hhnJkEQg9
+
+#
+# Which node manages information in DNS servers ?
+#
+dns_manager = 137.138.28.176
+
+#
+# Clusters definitions
+#
