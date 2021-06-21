@@ -14,15 +14,15 @@ func TestLbconf(t *testing.T) {
 	//Read files
 	aliasresources, err := ioutil.ReadFile("aliasresources")
 	if err != nil {
-		panic(err)
+		t.Errorf("Error opening aliasresources: %s\n", err.Error())
 	}
 	lbparams, err := ioutil.ReadFile("lbparams")
 	if err != nil {
-		panic(err)
+		t.Errorf("Error opening lbparams: %s\n", err.Error())
 	}
 	expected, err := ioutil.ReadFile("expected")
 	if err != nil {
-		panic(err)
+		t.Errorf("Error opening expected: %s\n", err.Error())
 	}
 
 	Configdir := "."
@@ -58,7 +58,7 @@ func TestLbconf(t *testing.T) {
 	}
 	obtained, err := ioutil.ReadFile(Configfile)
 	if err != nil {
-		panic(err)
+		t.Errorf("Error opening Configfile: %s\n", err.Error())
 	}
 	if !bytes.Equal(expected, obtained) {
 		//t.Errorf("lbconf: got\n %v expected\n %v", obtained, expected)
