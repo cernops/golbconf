@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/lbconf/connect"
 	"os"
 	"sort"
 	"strings"
@@ -106,14 +105,8 @@ func removeDuplicates(listwithdups []string) []string {
 }
 
 // Get alias resources from PuppetDB
-func (lbc *LBConfig) Get_alias_resources_from_pdb(pdb connect.Connect) error {
-	err, aliasresources := pdb.GetData()
-	if err != nil {
-		if lbc.Debug {
-			fmt.Printf("Error: %s\n", err.Error())
-			return err
-		}
-	}
+func (lbc *LBConfig) Get_alias_resources_from_pdb(aliasresources []byte) error {
+
 	if err := json.Unmarshal(aliasresources, &lbc.resources); err != nil {
 		if lbc.Debug {
 			fmt.Printf("Error: %s\n", err.Error())
@@ -137,14 +130,8 @@ func (lbc *LBConfig) Get_alias_resources_from_pdb(pdb connect.Connect) error {
 }
 
 // Get alias objects from Ermis REST service
-func (lbc *LBConfig) Get_alias_objects_from_ermis(lbp connect.Connect) error {
-	err, lbparams := lbp.GetData()
-	if err != nil {
-		if lbc.Debug {
-			fmt.Printf("Error: %s\n", err.Error())
-		}
-		return err
-	}
+func (lbc *LBConfig) Get_alias_objects_from_ermis(lbparams []byte) error {
+
 	if err := json.Unmarshal(lbparams, &lbc.searchResp); err != nil {
 		if lbc.Debug {
 			fmt.Printf("Error: %s\n", err.Error())
@@ -288,8 +275,8 @@ func removeEmpty(list []string) []string {
 
 // Creates load-balancing.conf
 func (lbc *LBConfig) Create_config_file(Lbheader string, Configfile string) error {
-	prevfile := Configfile[0:len(Configfile)-5] + "prev"
-	newfile := Configfile[0:len(Configfile)-5] + "new"
+	prevfile := Configfile[0:len(Configfile)-4] + "prev"
+	newfile := Configfile[0:len(Configfile)-4] + "new"
 	headerlines, err := readLines(Lbheader)
 	if err != nil {
 		if lbc.Debug {

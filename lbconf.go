@@ -55,7 +55,12 @@ func main() {
 		Url:      Pdburl,
 		Client:   &http.Client{}}
 
-	err = lbconfig.Get_alias_resources_from_pdb(pdb)
+	err, aliasresources := pdb.GetData()
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		os.Exit(1)
+	}
+	err = lbconfig.Get_alias_resources_from_pdb(aliasresources)
 	if err != nil {
 		fmt.Printf("Get_alias_resources_from_pdb Error: %s\n", err.Error())
 		os.Exit(1)
@@ -68,7 +73,12 @@ func main() {
 		Url:      Lbparamsurl,
 		Client:   &http.Client{}}
 
-	err = lbconfig.Get_alias_objects_from_ermis(lbp)
+	err, lbparams := lbp.GetData()
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		os.Exit(1)
+	}
+	err = lbconfig.Get_alias_objects_from_ermis(lbparams)
 	if err != nil {
 		fmt.Printf("Get_alias_objects_from_ermis Error: %s\n", err.Error())
 		os.Exit(1)
