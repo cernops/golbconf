@@ -43,7 +43,7 @@ test-my-project:
     - ls
     - ls ./tests
     - ls -l /var/run/log
-    - ls -l /var/run/syslog
+    - ln -sf /var/run/log /var/run/syslog
     - go test -v -cover ./tests/...
     - go test -race ./tests
 
