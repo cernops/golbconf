@@ -38,11 +38,7 @@ test-my-project:
   stage: prebuild
   script:
     - *install_go
-    - go version
-    - pwd
-    - ls
-    - ls ./tests
-    - service rsyslog start
+    - /sbin/rsyslogd
     - ls -l /var/run/log
     - go test -v -cover ./tests/...
     - go test -race ./tests
