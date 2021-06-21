@@ -1,0 +1,51 @@
+---
+image: gitlab-registry.cern.ch/linuxsupport/c8-base:latest
+
+include:
+  - 'https://gitlab.cern.ch/linuxsupport/rpmci/raw/master/rpm-ci.yml'
+
+variables:
+  KOJI_TAG: 'lb'
+
+  BUILD_8: 'True'
+
+  DIST_8: .el8
+
+.install_go: &install_go |
+    yum -y install git gcc golang
+    mkdir -p /root/go/src/gitlab.cern.ch/lb-experts/
+    ln -s $(pwd) /root/go/src/gitlab.cern.ch/lb-experts/golbd
+    cd /root/go/src/gitlab.cern.ch/lb-experts/golbd
+    go get || true
+
+build-my-project:
+  stage: prebuild
+  script:
+    - *install_go
+    - go build
+    - go build -race
+
+fmt-my-project:
+  stage: prebuild
+  script:
+    - yum install -y golang
+    - MOD_FILES=$(find . -name "*.go"  -exec /usr/bin/go fmt {} \;)
+    - echo "FILES MODIFIED $MOD_FILES"
+    - if [ "$MOD_FILES" != "" ]; then false; fi
+
+test-my-project:
+  stage: prebuild
+  script:
+    - *install_go
+    - go test -v -cover ./tests/...
+    - go test -race ./tests
+
+build_docker_image_stable:
+  image: gitlab-registry.cern.ch/ci-tools/docker-image-builder:latest
+  stage: prebuild
+  script: "echo"
+  tags:
+    - docker-image-build
+  variables:
+    TO: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_BRANCH}
+
