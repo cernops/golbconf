@@ -14,8 +14,8 @@ variables:
 .install_go: &install_go |
     yum -y install git gcc golang
     mkdir -p /root/go/src/gitlab.cern.ch/lb-experts/
-    ln -s $(pwd) /root/go/src/gitlab.cern.ch/lb-experts/golbd
-    cd /root/go/src/gitlab.cern.ch/lb-experts/golbd
+    ln -s $(pwd) /root/go/src/gitlab.cern.ch/lb-experts/golbconf
+    cd /root/go/src/gitlab.cern.ch/lb-experts/golbconf
     go get || true
 
 build-my-project:
