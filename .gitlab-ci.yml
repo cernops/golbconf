@@ -12,7 +12,7 @@ variables:
   DIST_8: .el8
 
 .install_go: &install_go |
-    yum -y install git gcc golang
+    yum -y install git gcc golang systemd
     mkdir -p /root/go/src/gitlab.cern.ch/lb-experts/
     ln -s $(pwd) /root/go/src/gitlab.cern.ch/lb-experts/golbconf
     cd /root/go/src/gitlab.cern.ch/lb-experts/golbconf
@@ -43,7 +43,6 @@ test-my-project:
     - ls
     - ls ./tests
     - ls -l /var/run/log
-    - ln -sf /var/run/log /var/run/syslog
     - go test -v -cover ./tests/...
     - go test -race ./tests
 
