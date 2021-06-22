@@ -10,7 +10,7 @@
 
 Name: lbconf
 Version: 0.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: CERN DNS Load Balancer Config Generator
 License: ASL 2.0
 URL: https://%{import_path}
@@ -48,5 +48,7 @@ install -p -m0755 lbconf %{buildroot}%{_bindir}/lbconf
 %attr(755,root,root) %{_bindir}/lbconf
 
 %changelog
+* Tue Jun 22 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 0.1-2
+- Fix filenames
 * Mon Jun 21 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 0.1-1
 - First version of the rpm

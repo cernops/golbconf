@@ -32,9 +32,9 @@ func main() {
 	Hostprivkey := fmt.Sprintf("/var/lib/puppet/ssl/private_keys/%s.pem", Hostname)
 	//Hostprivkey := fmt.Sprintf("/afs/cern.ch/user/r/reguero/work/git/golbconf/%s.pem", Hostname)
 	Configdir := *configDirFlag
-	Reportfile := fmt.Sprintf("%s/load-balancing-go.report", Configdir)
+	Reportfile := fmt.Sprintf("%s/load-balancing.report", Configdir)
 	Lbheader := fmt.Sprintf("%s/load-balancing.conf-header", Configdir)
-	Configfile := fmt.Sprintf("%s/load-balancing-go.conf", Configdir)
+	Configfile := fmt.Sprintf("%s/load-balancing.conf", Configdir)
 
 	lg := lbconfig.Log{Writer: syslog.Writer{}, Syslog: false, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: Reportfile}
 
