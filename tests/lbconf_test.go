@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/pmezard/go-difflib/difflib"
 	"gitlab.cern.ch/lb-experts/lbconf/lbconfig"
-	"gitlab.cern.ch/lb-experts/lbconf/runner"
 	"io/ioutil"
 	"log/syslog"
 	"testing"
@@ -59,7 +59,14 @@ func TestLbconf(t *testing.T) {
 	if !bytes.Equal(expected, obtained) {
 		//t.Errorf("lbconf: got\n %v expected\n %v", obtained, expected)
 		//t.Errorf("lbconf: got diffence.\nTry\ndiff  %s %s", Configfile, "expected")
-		rawOutput, _, _ := runner.Run("/usr/bin/diff", 0, Configfile, "./expected")
+		diff := difflib.UnifiedDiff{
+			A:        difflib.SplitLines(string(expected)),
+			B:        difflib.SplitLines(string(obtained)),
+			FromFile: "Expected",
+			ToFile:   "Obtained",
+			Context:  3,
+		}
+		rawOutput, _ := difflib.GetUnifiedDiffString(diff)
 		t.Errorf("lbconf: got diffence:\noutput of diff  %s %s :\n%s\n", Configfile, "./expected", rawOutput)
 	}
 }
